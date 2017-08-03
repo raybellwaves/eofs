@@ -19,10 +19,9 @@ from __future__ import absolute_import
 
 import collections
 
-try:
-    import xarray as xr
-except ImportError:
-    import xray as xr
+import sys # for de-bugging
+
+import xarray as xr
 
 from . import standard
 from .tools.xarray import (find_time_coordinates, categorise_ndcoords,
@@ -175,7 +174,7 @@ class Eof(object):
         """
         pcs = self._solver.pcs(pcscaling, npcs)
         pcdim = xr.IndexVariable('mode', range(pcs.shape[1]),
-                                 attrs={'long_name': 'eof_mode_number'})
+                              attrs={'long_name': 'eof_mode_number'})
         coords = [self._time, pcdim]
         pcs = xr.DataArray(pcs, coords=coords, name='pcs')
         pcs.coords.update({coord.name: ('time', coord)
@@ -221,7 +220,7 @@ class Eof(object):
         """
         eofs = self._solver.eofs(eofscaling, neofs)
         eofdim = xr.IndexVariable('mode', range(eofs.shape[0]),
-                                  attrs={'long_name': 'eof_mode_number'})
+                               attrs={'long_name': 'eof_mode_number'})
         coords = [eofdim] + self._coords
         long_name = 'empirical_orthogonal_functions'
         eofs = xr.DataArray(eofs, coords=coords, name='eofs',
@@ -268,7 +267,7 @@ class Eof(object):
         """
         eofs = self._solver.eofsAsCorrelation(neofs)
         eofdim = xr.IndexVariable('mode', range(eofs.shape[0]),
-                                  attrs={'long_name': 'eof_mode_number'})
+                               attrs={'long_name': 'eof_mode_number'})
         coords = [eofdim] + self._coords
         long_name = 'correlation_between_pcs_and_{!s}'.format(self._name)
         eofs = xr.DataArray(eofs, coords=coords, name='eofs',
@@ -326,15 +325,20 @@ class Eof(object):
             eof1 = solver.eofsAsCovariance(neofs=1, pcscaling=0)
 
         """
-        eofs = self._solver.eofsAsCovariance(neofs, pcscaling)
+        eofs = self._solver.eofsAsCovariance(neofs, pcscaling) # numpy array
+        # variance explained
+        varexpl = self._solver.varianceFraction(neofs) * 100
+        # Create xarray
         eofdim = xr.IndexVariable('mode', range(eofs.shape[0]),
-                                  attrs={'long_name': 'eof_mode_number'})
+                               attrs={'long_name': 'eof_mode_number'})
         coords = [eofdim] + self._coords
         long_name = 'covariance_between_pcs_and_{!s}'.format(self._name)
         eofs = xr.DataArray(eofs, coords=coords, name='eofs',
                             attrs={'long_name': long_name})
         eofs.coords.update({coord.name: (coord.dims, coord)
                             for coord in self._space_ndcoords})
+        # Add variance explain as an attribute
+        eofs.attrs['var_expl'] = varexpl
         return eofs
 
     def eigenvalues(self, neigs=None):
@@ -368,7 +372,7 @@ class Eof(object):
         """
         lambdas = self._solver.eigenvalues(neigs=neigs)
         eofdim = xr.IndexVariable('mode', range(lambdas.shape[0]),
-                                  attrs={'long_name': 'eof_mode_number'})
+                               attrs={'long_name': 'eof_mode_number'})
         coords = [eofdim]
         long_name = 'eigenvalues'
         lambdas = xr.DataArray(lambdas, coords=coords, name='eigenvalues',
@@ -410,7 +414,7 @@ class Eof(object):
         """
         vf = self._solver.varianceFraction(neigs=neigs)
         eofdim = xr.IndexVariable('mode', range(vf.shape[0]),
-                                  attrs={'long_name': 'eof_mode_number'})
+                               attrs={'long_name': 'eof_mode_number'})
         coords = [eofdim]
         long_name = 'variance_fractions'
         vf = xr.DataArray(vf, coords=coords, name='variance_fractions',
@@ -484,7 +488,7 @@ class Eof(object):
         """
         typerrs = self._solver.northTest(neigs=neigs, vfscaled=vfscaled)
         eofdim = xr.IndexVariable('mode', range(typerrs.shape[0]),
-                                  attrs={'long_name': 'eof_mode_number'})
+                               attrs={'long_name': 'eof_mode_number'})
         coords = [eofdim]
         long_name = 'typical_errors'
         typerrs = xr.DataArray(typerrs, coords=coords, name='typical_errors',
@@ -622,14 +626,14 @@ class Eof(object):
         # Create the PCs DataArray.
         if pcs.ndim == 2:
             pcdim = xr.IndexVariable('mode', range(pcs.shape[1]),
-                                     attrs={'long_name': 'eof_mode_number'})
+                                  attrs={'long_name': 'eof_mode_number'})
             pcs = xr.DataArray(
                 pcs,
                 coords=[time_coord, pcdim], name='pseudo_pcs',
                 attrs={'long_name': '{}_pseudo_pcs'.format(array_name)})
         else:
             pcdim = xr.IndexVariable('mode', range(pcs.shape[0]),
-                                     attrs={'long_name': 'eof_mode_number'})
+                                  attrs={'long_name': 'eof_mode_number'})
             pcs = xr.DataArray(
                 pcs,
                 coords=[pcdim], name='pseudo_pcs',
@@ -637,7 +641,7 @@ class Eof(object):
         if has_time:
             # Add non-dimension coordinates.
             pcs.coords.update({coord.name: (coord.dims, coord)
-                               for coord in self._time_ndcoords})
+                               for coord in time_ndcoords})
         return pcs
 
     def getWeights(self):
