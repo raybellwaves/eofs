@@ -18,10 +18,7 @@
 from __future__ import absolute_import
 
 import numpy as np
-try:
-    import xarray as xr
-except ImportError:
-    import xray as xr
+import xarray as xr
 
 from . import standard
 from .generic import covcor_dimensions
